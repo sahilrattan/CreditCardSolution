@@ -1,0 +1,49 @@
+/* Default Dark Theme */
+:root {
+    --background-color: #111;
+    --text-color: #fff;
+    --navbar-bg: #222;
+    --button-bg: red;
+    --button-text: white;
+  }
+  
+  /* Light Theme */
+  [data-theme="light"] {
+    --background-color: #fff;
+    --text-color: #111;
+    --navbar-bg: #ddd;
+    --button-bg: black;
+    --button-text: white;
+  }
+  
+  /* Apply Theme to Body */
+  body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+  }
+  
+  /* Navbar Styling */
+  .navbar {
+    background: var(--navbar-bg);
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  /* Theme Button */
+  .theme-button {
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    padding: 8px 15px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: 0.3s;
+  }
+  
+  .theme-button:hover {
+    opacity: 0.8;
+  }
+  

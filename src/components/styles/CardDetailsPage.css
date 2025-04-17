@@ -1,0 +1,124 @@
+/* CardDetailsPage.css */
+.card-details-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Arial', sans-serif;
+    background-color:lightsteelblue;
+  }
+  
+  .card-details-header {
+    margin-bottom: 30px;
+  }
+  
+  .back-btn {
+    background: none;
+    border: none;
+    color: #3498db;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 5px 0;
+    margin-bottom: 15px;
+  }
+  
+  .back-btn:hover {
+    text-decoration: underline;
+  }
+  
+  .card-details-content {
+    display: flex;
+    gap: 40px;
+  }
+  
+  .card-image-section {
+    flex: 1;
+  }
+  
+  .detailed-card-image {
+    width: 100%;
+    max-width: 400px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .primary-apply-btn {
+    background-color: #f39c12;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .primary-apply-btn:hover {
+    background-color: #e67e22;
+  }
+  
+  .card-info-section {
+    flex: 2;
+  }
+  
+  .card-highlight {
+    font-size: 1.2rem;
+    color: #2c3e50;
+    font-weight: bold;
+    margin: 15px 0;
+  }
+  
+  .card-specs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin: 25px 0;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+  }
+  
+  .spec-item {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .spec-label {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    margin-bottom: 5px;
+  }
+  
+  .spec-value {
+    font-size: 1.1rem;
+    color: #2c3e50;
+    font-weight: bold;
+  }
+  
+  .benefits-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 20px 0;
+  }
+  
+  .benefits-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+  }
+  
+  .benefits-list li:before {
+    content: "✓";
+    color: #27ae60;
+    margin-right: 10px;
+    font-weight: bold;
+  }
+  
+  .disclaimer {
+    margin-top: 30px;
+    font-size: 0.8rem;
+    color: #95a5a6;
+    font-style: italic;
+  }

@@ -1,0 +1,89 @@
+.footer {
+  background-color: #282c34; /* Dark background for sophistication */
+  color: #f1f1f1; /* Light text color for contrast */
+  padding: 60px 10%;
+  text-align: left;
+  font-family: 'Roboto', sans-serif;
+  border-top: 3px solid #00bcd4; /* Clean top border for emphasis */
+}
+
+.footer-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 40px;
+}
+
+.footer-section {
+  flex: 1;
+  min-width: 250px;
+  padding: 30px;
+  background-color: #333;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.footer-section h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #00bcd4; /* Highlight headers with accent color */
+  text-transform: uppercase;
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-section ul li {
+  margin: 12px 0;
+}
+
+.footer-section ul li a {
+  color: #ccc; /* Light grey color for links */
+  text-decoration: none;
+  font-size: 16px;
+  transition: color 0.3s ease-in-out;
+}
+
+.footer-section ul li a:hover {
+  color: #00bcd4; /* Change link color on hover to accent color */
+  text-decoration: underline;
+}
+
+.footer-section p {
+  font-size: 14px;
+  margin-top: 20px;
+  color: #bbb; /* Lighter color for paragraph text */
+  font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .footer-container {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .footer-section {
+    width: 100%;
+  }
+}
+.whatsapp-btn {
+  background-color: #25D366;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.whatsapp-btn:hover {
+  background-color: #128C7E;
+}

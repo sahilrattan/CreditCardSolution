@@ -1,0 +1,230 @@
+/* Credit Card Page Styles */
+.credit-card-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background-color: white;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 3rem;
+  padding: 2rem 0;
+  background: linear-gradient(135deg, #2c3e50, #3498db);
+  color: white;
+  border-radius: 10px;
+}
+
+.page-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.page-header p {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.header-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.header-btn {
+  padding: 0.8rem 2rem;
+  border: none;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.header-btn.active {
+  background-color: #d10000;
+  color: white;
+}
+
+.header-btn:not(.active) {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.main-content {
+  padding: 1rem;
+}
+
+.main-content h2 {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.subtitle {
+  text-align: center;
+  color: #666;
+  margin-bottom: 3rem;
+  font-size: 1.1rem;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.credit-card {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  background-color: white
+}
+
+.credit-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  position: relative;
+}
+
+.card-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.4rem;
+}
+
+.card-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background-color: #d10000;
+  color: white;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.card-image {
+  width: 100%;
+  height: 300px;
+  object-fit: contain;
+  background-color: lightgray;
+  padding: 1rem;
+}
+
+.card-details {
+  padding: 1.5rem;
+  flex-grow: 1;
+}
+
+.highlight {
+  font-weight: 600;
+  color: #d10000;
+  margin-bottom: 0.5rem;
+}
+
+.benefits-preview {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.benefits-preview li {
+  padding: 0.3rem 0;
+  color: #555;
+}
+
+.card-specs {
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: #666;
+  background-color: rgb(5, 38, 49);
+}
+
+.card-specs p {
+  margin: 0.5rem 0;
+}
+
+.apply-btn {
+  width: 100%;
+  padding: 1rem;
+  background-color: #d10000;
+  color: white;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.apply-btn:hover {
+  background-color: #ff3333;
+}
+
+/* Dark Mode Support */
+.dark .credit-card {
+  background-color: #2a2a2a;
+  color: #ffffff;
+}
+
+.dark .card-header {
+  background-color: #1e1e1e;
+}
+
+.dark .card-header h3 {
+  color: #ffffff;
+}
+
+.dark .highlight {
+  color: #ff5252;
+}
+
+.dark .benefits-preview li {
+  color: #cccccc;
+}
+
+.dark .card-specs {
+  color: #aaaaaa;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+  
+  .page-header h1 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .credit-card-container {
+    padding: 1rem;
+  }
+  
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .header-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .header-btn {
+    width: 80%;
+  }
+}

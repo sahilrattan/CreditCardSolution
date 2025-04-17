@@ -1,0 +1,207 @@
+/* src/components/styles/LoginForm.module.css */
+
+.loginPage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 1rem;
+  background: linear-gradient(to right, #f0f4f8, #d9e2ec);
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.loginCard {
+  background-color: #ffffff;
+  padding: 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 450px;
+}
+
+.loginHeader {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.loginTitle {
+  margin: 0;
+  font-size: 1.8rem;
+  color: #222;
+}
+
+.loginSubtitle {
+  font-size: 0.95rem;
+  color: #555;
+  margin-top: 0.5rem;
+}
+
+.errorMessage,
+.successMessage {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+}
+
+.errorMessage {
+  background-color: #ffe6e6;
+  color: #b30000;
+}
+
+.successMessage {
+  background-color: #e6ffea;
+  color: #007f3f;
+}
+
+.errorIcon,
+.successIcon {
+  margin-right: 8px;
+  font-size: 1.2rem;
+}
+
+.loginForm {
+  display: flex;
+  flex-direction: column;
+}
+
+.formGroup {
+  margin-bottom: 1.25rem;
+}
+
+.formLabel {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.formInput {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.formInput:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+.passwordInputWrapper {
+  position: relative;
+}
+
+.formFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.rememberMe {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.checkbox {
+  margin-right: 6px;
+}
+
+.forgotPasswordBtn {
+  background: none;
+  border: none;
+  color: #007bff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.forgotPasswordBtn:hover {
+  text-decoration: none;
+}
+
+.submitButton {
+  background-color: #007bff;
+  color: white;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  transition: background-color 0.3s ease;
+  width: 100%;
+}
+
+.submitButton:hover {
+  background-color: #0056b3;
+}
+
+.adminButton {
+  background-color: #343a40;
+}
+
+.adminButton:hover {
+  background-color: #23272b;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #fff;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.divider {
+  text-align: center;
+  margin: 1rem 0;
+  color: #888;
+  position: relative;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  height: 1px;
+  background-color: #ccc;
+  flex: 1;
+  margin: 0 10px;
+  display: inline-block;
+}
+
+.signupPrompt {
+  text-align: center;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.signupLink {
+  background: none;
+  border: none;
+  color: #007bff;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.signupLink:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,131 @@
+.signupContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f4f8; /* Light bluish-gray for a soft background */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 2rem;
+}
+
+.signupCard {
+  background-color:
+  
+  
+  
+  
+  
+  rgb(225, 239, 244); /* Clean white card */
+  padding: 3rem 2rem;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15); /* Softer shadow */
+  color: #1a1a1a; /* Dark text for contrast */
+}
+
+
+.signupCard h2 {
+  text-align: center;
+  font-size: 1.8rem;
+  margin-bottom: 2rem;
+  color: #ffffff;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #2c303f;
+}
+h2 ::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 3px;
+  background: #6366f1;
+  margin: 10px auto 0;
+}
+
+/* Form Groups */
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+}
+
+.formRow {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.formRow .formGroup {
+  flex: 1;
+}
+
+/* Labels */
+.formGroup label {
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+  color: #c2c6d4;
+}
+
+/* Input Fields */
+/* Input Fields */
+input,
+textarea {
+  padding: 0.75rem 1rem;
+  background-color: #ffffff; /* Clean white inputs for light theme */
+  border: 1px solid #d1d5db; /* Soft border */
+  border-radius: 10px;
+  font-size: 1rem;
+  color: #111827; /* Darker text for readability */
+  transition: border 0.3s ease, box-shadow 0.2s ease;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280; /* Subtle placeholder */
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #6366f1; /* Indigo border */
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); /* Indigo focus ring */
+}
+
+/* Error / Valid borders */
+input:invalid:required {
+  border-color: rgba(231, 76, 60, 0.6);
+  background-color: #fff5f5;
+}
+
+input:valid {
+  border-color: rgba(46, 204, 113, 0.5);
+}
+
+/* Labels */
+.formGroup label {
+  margin-bottom: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #374151; /* Slate color for text */
+}
+
+/* Headings */
+.signupCard h2 {
+  text-align: center;
+  font-size: 1.8rem;
+  margin-bottom: 2rem;
+  color: #111827; /* Dark heading for contrast */
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Underline style under heading */
+h2::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 3px;
+  background: #6366f1;
+  margin: 10px auto 0;
+}
