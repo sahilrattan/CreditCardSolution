@@ -1,223 +1,257 @@
-"use client";
+"use client"
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { getFileIcon, getMimeType } from "@/utils/file-utils";
-import type { DocumentUrlListVM } from "@/api/models/DocumentUrlListVM";
-import { useEffect, useCallback, useState } from "react";
-import { ExternalLink, Download, AlertCircle } from "lucide-react";
+import type { ControllerRenderProps } from "react-hook-form"
+import type { z } from "zod"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { FormControl, FormDescription, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
+import { CalendarIcon, ClockIcon } from "lucide-react"
+import { format } from "date-fns"
+import type { FormField, FormFieldOption } from "./types"
 
-interface FilePreviewDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  document: DocumentUrlListVM | null;
+interface DynamicFieldProps {
+  fieldConfig: FormField
+  field: ControllerRenderProps<z.ZodObject<any>, any>
 }
 
-export function FilePreviewDialog({
-  open,
-  onOpenChange,
-  document,
-}: FilePreviewDialogProps) {
-  const [isLoading, setIsLoading] = useState(true);
-  const mimeType = getMimeType(document?.name ?? "");
-  const Icon = getFileIcon(document?.name ?? "");
-  const fileUrl = document?.url || document?.blobUrl || "";
-
-  const getProxyUrl = useCallback(() => {
-    return `http://localhost:3001/api/view-pdf?url=${encodeURIComponent(fileUrl)}`;
-  }, [fileUrl]);
-
-  const openPdf = useCallback(() => {
-    if (fileUrl) {
-      const proxyUrl = getProxyUrl();
-      window.open(proxyUrl, "_blank", "noopener,noreferrer");
-    }
-  }, [fileUrl, getProxyUrl]);
-
-  const downloadFile = useCallback(() => {
-    if (fileUrl && document?.name) {
-      const link = document.createElement("a");
-      link.href = fileUrl;
-      link.download = document.name;
-      link.click();
-    }
-  }, [fileUrl, document?.name]);
-
-  useEffect(() => {
-    if (open) {
-      setIsLoading(true);
-    }
-  }, [open]);
-
-  if (!document) return null;
-
-  const renderPreviewContent = () => {
-    if (!fileUrl) {
-      return (
-        <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-          <Icon className="h-16 w-16 mb-4" />
-          <p className="text-lg font-medium">No preview available.</p>
-          <p className="text-sm">The file URL is missing or invalid.</p>
-        </div>
-      );
-    }
-
-    /** ---------- Image ---------- */
-    if (mimeType.startsWith("image/")) {
-      return (
-        <img
-          src={fileUrl}
-          alt={document.name ?? "File preview"}
-          className="max-w-full max-h-[70vh] object-contain mx-auto"
-          onLoad={() => setIsLoading(false)}
+export function DynamicInput({ fieldConfig, field }: DynamicFieldProps) {
+  return (
+    <FormItem>
+      <FormLabel>{fieldConfig.label}</FormLabel>
+      <FormControl>
+        <Input
+          placeholder={fieldConfig.placeholder || ""}
+          {...field}
+          type={fieldConfig.type === "number" ? "number" : "text"}
         />
-      );
-    }
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )
+}
 
-    /** ---------- PDF with iframe (via proxy) ---------- */
-    if (mimeType === "application/pdf") {
-      const proxyUrl = getProxyUrl();
-      return (
-        <div className="w-full h-[80vh] relative">
-          {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
-              <div className="flex flex-col items-center gap-2">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="text-sm text-muted-foreground">Loading PDF...</p>
-              </div>
-            </div>
-          )}
-          <iframe
-            src={proxyUrl}
-            width="100%"
-            height="100%"
-            style={{ border: "none" }}
-            title="PDF Preview"
-            onLoad={() => setIsLoading(false)}
-          />
-          {!isLoading && (
-            <div className="absolute top-4 right-4 flex gap-2 z-20">
-              <Button onClick={openPdf} size="sm" variant="secondary" className="flex items-center gap-1">
-                <ExternalLink className="h-3 w-3" />
-                Open
-              </Button>
-              <Button onClick={downloadFile} size="sm" variant="secondary" className="flex items-center gap-1">
-                <Download className="h-3 w-3" />
-                Download
-              </Button>
-            </div>
-          )}
-        </div>
-      );
-    }
+export function DynamicTextarea({ fieldConfig, field }: DynamicFieldProps) {
+  return (
+    <FormItem>
+      <FormLabel>{fieldConfig.label}</FormLabel>
+      <FormControl>
+        <Textarea placeholder={fieldConfig.placeholder || ""} {...field} rows={3} />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )
+}
 
-    /** ---------- Unsupported file ---------- */
-    return (
-      <div className="flex flex-col items-center justify-center py-8 space-y-4">
-        <AlertCircle className="h-16 w-16 text-amber-500 mb-2" />
-        <p className="text-lg font-medium">Preview not available</p>
-        <p className="text-sm text-muted-foreground text-center max-w-md">
-          This file cannot be displayed in-browser. You can open it in a new tab or download it below.
-        </p>
-        <div className="flex gap-3 mt-4">
-          {mimeType === "application/pdf" && (
-            <Button
-              onClick={openPdf}
-              variant="default"
-              className="flex items-center gap-2"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Open in New Tab
-            </Button>
-          )}
-          <Button
-            onClick={downloadFile}
-            variant="outline"
-            className="flex items-center gap-2 bg-transparent"
-          >
-            <Download className="h-4 w-4" />
-            Download File
-          </Button>
-        </div>
-      </div>
-    );
-  };
+export function DynamicSelect({ fieldConfig, field }: DynamicFieldProps) {
+  const selectFieldConfig = fieldConfig as FormField & {
+    options: FormFieldOption[]
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Icon className="h-6 w-6 text-blue-600" />
-            {document.name ?? "File Preview"}
-          </DialogTitle>
-          <DialogDescription>
-            {document.description ?? "No description available."}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-4 flex justify-center items-center w-full">
-          {renderPreviewContent()}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+    <FormItem>
+      <FormLabel>{selectFieldConfig.label}</FormLabel>
+      <Select onValueChange={field.onChange} defaultValue={field.value}>
+        <FormControl>
+          <SelectTrigger>
+            <SelectValue placeholder={selectFieldConfig.placeholder || "Select an option"} />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent>
+          {selectFieldConfig.options?.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )
 }
 
+export function DynamicCheckbox({ fieldConfig, field }: DynamicFieldProps) {
+  return (
+    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+      <FormControl>
+        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+      </FormControl>
+      <div className="space-y-1 leading-none">
+        <FormLabel>{fieldConfig.label}</FormLabel>
+        {fieldConfig.placeholder && <FormDescription>{fieldConfig.placeholder}</FormDescription>}
+      </div>
+      <FormMessage />
+    </FormItem>
+  )
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const express = require("express");
-const fetch = require("node-fetch"); // Use node-fetch v2 for CommonJS
-const app = express();
-const PORT = 3001;
-
-app.get("/api/view-pdf", async (req, res) => {
-  const fileUrl = req.query.url;
-
-  if (!fileUrl) {
-    return res.status(400).send("Missing 'url' query parameter");
+export function DynamicRadioGroup({ fieldConfig, field }: DynamicFieldProps) {
+  const radioGroupFieldConfig = fieldConfig as FormField & {
+    options: FormFieldOption[]
   }
 
-  try {
-    const response = await fetch(fileUrl);
+  return (
+    <FormItem className="space-y-3">
+      <FormLabel>{radioGroupFieldConfig.label}</FormLabel>
+      <FormControl>
+        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-col space-y-1">
+          {radioGroupFieldConfig.options?.map((option) => (
+            <FormItem key={option.value} className="flex items-center space-x-3 space-y-0">
+              <FormControl>
+                <RadioGroupItem value={option.value} />
+              </FormControl>
+              <FormLabel className="font-normal">{option.label}</FormLabel>
+            </FormItem>
+          ))}
+        </RadioGroup>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )
+}
 
-    if (!response.ok) {
-      return res.status(response.status).send("Failed to fetch file");
-    }
+export function DynamicEmail({ fieldConfig, field }: DynamicFieldProps) {
+  return (
+    <FormItem>
+      <FormLabel>{fieldConfig.label}</FormLabel>
+      <FormControl>
+        <Input placeholder={fieldConfig.placeholder || ""} {...field} type="email" />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )
+}
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "inline; filename=preview.pdf");
-
-    response.body.pipe(res); // Stream the response to client
-  } catch (error) {
-    console.error("Proxy error:", error);
-    res.status(500).send("Server error while fetching file");
+export function DynamicNumber({ fieldConfig, field }: DynamicFieldProps) {
+  const numberFieldConfig = fieldConfig as FormField & {
+    min?: number
+    max?: number
+    step?: number
   }
-});
 
-app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}`);
-});
+  return (
+    <FormItem>
+      <FormLabel>{numberFieldConfig.label}</FormLabel>
+      <FormControl>
+        <Input
+          placeholder={numberFieldConfig.placeholder || ""}
+          {...field}
+          type="number"
+          min={numberFieldConfig.min}
+          max={numberFieldConfig.max}
+          step={numberFieldConfig.step}
+        />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )
+}
+
+export function DynamicPhone({ fieldConfig, field }: DynamicFieldProps) {
+  return (
+    <FormItem>
+      <FormLabel>{fieldConfig.label}</FormLabel>
+      <FormControl>
+        <Input placeholder={fieldConfig.placeholder || ""} {...field} type="tel" />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )
+}
+
+export function DynamicDate({ fieldConfig, field }: DynamicFieldProps) {
+  return (
+    <FormItem>
+      <FormLabel>{fieldConfig.label}</FormLabel>
+      <Popover>
+        <PopoverTrigger asChild>
+          <FormControl>
+            <Button variant={"outline"} className="w-full justify-start text-left font-normal">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+            </Button>
+          </FormControl>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0">
+          <Calendar
+            mode="single"
+            selected={field.value ? new Date(field.value) : undefined}
+            onSelect={field.onChange}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+      <FormMessage />
+    </FormItem>
+  )
+}
+
+export function DynamicTime({ fieldConfig, field }: DynamicFieldProps) {
+  return (
+    <FormItem>
+      <FormLabel>{fieldConfig.label}</FormLabel>
+      <FormControl>
+        <div className="flex items-center">
+          <Input placeholder={fieldConfig.placeholder || ""} {...field} type="time" />
+          <ClockIcon className="ml-2 h-4 w-4 text-muted-foreground" />
+        </div>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )
+}
+
+export function DynamicFile({ fieldConfig, field }: DynamicFieldProps) {
+  const fileFieldConfig = fieldConfig as FormField & {
+    accept?: string
+    multiple?: boolean
+  }
+
+  return (
+    <FormItem>
+      <FormLabel>{fileFieldConfig.label}</FormLabel>
+      <FormControl>
+        <Input
+          type="file"
+          onChange={(e) => field.onChange(e.target.files)}
+          accept={fileFieldConfig.accept}
+          multiple={fileFieldConfig.multiple}
+        />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )
+}
+
+export function DynamicToggle({ fieldConfig, field }: DynamicFieldProps) {
+  return (
+    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+      <div className="space-y-0.5">
+        <FormLabel>{fieldConfig.label}</FormLabel>
+        {fieldConfig.placeholder && <FormDescription>{fieldConfig.placeholder}</FormDescription>}
+      </div>
+      <FormControl>
+        <Switch checked={field.value} onCheckedChange={field.onChange} />
+      </FormControl>
+    </FormItem>
+  )
+}
+
+export function DynamicSection({ fieldConfig }: DynamicFieldProps) {
+  return (
+    <div className="space-y-1">
+      <h3 className="text-lg font-semibold">{fieldConfig.label}</h3>
+      {fieldConfig.placeholder && <p className="text-sm text-muted-foreground">{fieldConfig.placeholder}</p>}
+    </div>
+  )
+}
+
+export function DynamicDivider() {
+  return <div className="border-t my-4" />
+}
