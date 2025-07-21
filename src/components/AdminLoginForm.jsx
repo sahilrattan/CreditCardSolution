@@ -1,257 +1,161 @@
 "use client"
+import { Routes, Route } from "react-router-dom"
+import type React from "react"
 
-import type { ControllerRenderProps } from "react-hook-form"
-import type { z } from "zod"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FormControl, FormDescription, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Switch } from "@/components/ui/switch"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Button } from "@/components/ui/button"
-import { CalendarIcon, ClockIcon } from "lucide-react"
-import { format } from "date-fns"
-import type { FormField, FormFieldOption } from "./types"
+import { I18nProvider } from "@lingui/react"
+import { i18n } from "@lingui/core"
+import { useEffect, useState } from "react"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/sidebar/Sidebar"
+import { ThemeProvider } from "@/components/ThemeProvider"
+import { NavigationMenuBar } from "./components/NavigationMenu"
+import Inbox from "./components/Inbox"
+import SignUpForm from "./modules/auth/signUp"
+import SignInForm from "./modules/auth/signIn"
+import UserTable from "./components/user/UserTable"
+import Settings from "./routes/settings"
+import Account from "./components/Account"
+import { Calendar1 } from "./components/Calendar"
+import { Toaster } from "./components/ui/sonner"
+import KanbanBoard from "./components/kanban/KanbanBoard"
+import OrgChart from "./components/OrganisationChart"
+import { InvoiceForm } from "./components/InvoiceForm"
+import { PushManager } from "./components/PushManager"
+import TicketingSystem from "./components/TicketManagement"
+import ProfilePage from "./components/ProfilePage"
+import ForgotPasswordForm from "./modules/auth/forgotPassword"
+import CitiesPage from "./components/Cities"
+import { OpenAPI } from "@/api/core/OpenAPI"
+import { CustomOpenAPIConfig } from "@/api/custom/OpenAPIConfig"
+import SopPage from "./components/Sop"
+import { AvatarProvider } from "@/stores/AvatarStore"
+import ResetPasswordPage from "./modules/auth/resetPassword"
+import FallbackRoot from "./ResetFallback"
+import UserManagementPage from "./components/user/UsersList"
+import FormTemplatesPage from "./components/form/FormTemplates"
+import FormBuilder from "./components/form/form-builder"
+import FormPreviewPage from "./components/form/FormPreviewPage1"
+import { useLocation } from "react-router-dom"
 
-interface DynamicFieldProps {
-  fieldConfig: FormField
-  field: ControllerRenderProps<z.ZodObject<any>, any>
+const localeMessages = {
+  en: () => import("@/locales/en/messages.js"),
+  hi: () => import("@/locales/hi/messages.js"),
+  de: () => import("@/locales/de/messages.js"),
 }
 
-export function DynamicInput({ fieldConfig, field }: DynamicFieldProps) {
+// Layout component for pages with sidebar
+const MainLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <FormItem>
-      <FormLabel>{fieldConfig.label}</FormLabel>
-      <FormControl>
-        <Input
-          placeholder={fieldConfig.placeholder || ""}
-          {...field}
-          type={fieldConfig.type === "number" ? "number" : "text"}
-        />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )
-}
-
-export function DynamicTextarea({ fieldConfig, field }: DynamicFieldProps) {
-  return (
-    <FormItem>
-      <FormLabel>{fieldConfig.label}</FormLabel>
-      <FormControl>
-        <Textarea placeholder={fieldConfig.placeholder || ""} {...field} rows={3} />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )
-}
-
-export function DynamicSelect({ fieldConfig, field }: DynamicFieldProps) {
-  const selectFieldConfig = fieldConfig as FormField & {
-    options: FormFieldOption[]
-  }
-
-  return (
-    <FormItem>
-      <FormLabel>{selectFieldConfig.label}</FormLabel>
-      <Select onValueChange={field.onChange} defaultValue={field.value}>
-        <FormControl>
-          <SelectTrigger>
-            <SelectValue placeholder={selectFieldConfig.placeholder || "Select an option"} />
-          </SelectTrigger>
-        </FormControl>
-        <SelectContent>
-          {selectFieldConfig.options?.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <FormMessage />
-    </FormItem>
-  )
-}
-
-export function DynamicCheckbox({ fieldConfig, field }: DynamicFieldProps) {
-  return (
-    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-      <FormControl>
-        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-      </FormControl>
-      <div className="space-y-1 leading-none">
-        <FormLabel>{fieldConfig.label}</FormLabel>
-        {fieldConfig.placeholder && <FormDescription>{fieldConfig.placeholder}</FormDescription>}
+    <SidebarProvider>
+      <div className="flex">
+        <AppSidebar />
+        <main className="flex-1 min-h-screen overflow-x-hidden">
+          <NavigationMenuBar />
+          <SidebarTrigger />
+          <PushManager />
+          <div className="p-4">{children}</div>
+        </main>
+        <Toaster richColors position="top-center" />
       </div>
-      <FormMessage />
-    </FormItem>
+    </SidebarProvider>
   )
 }
 
-export function DynamicRadioGroup({ fieldConfig, field }: DynamicFieldProps) {
-  const radioGroupFieldConfig = fieldConfig as FormField & {
-    options: FormFieldOption[]
-  }
-
+// Layout component for full-screen pages (like form preview)
+const FullScreenLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <FormItem className="space-y-3">
-      <FormLabel>{radioGroupFieldConfig.label}</FormLabel>
-      <FormControl>
-        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-col space-y-1">
-          {radioGroupFieldConfig.options?.map((option) => (
-            <FormItem key={option.value} className="flex items-center space-x-3 space-y-0">
-              <FormControl>
-                <RadioGroupItem value={option.value} />
-              </FormControl>
-              <FormLabel className="font-normal">{option.label}</FormLabel>
-            </FormItem>
-          ))}
-        </RadioGroup>
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )
-}
-
-export function DynamicEmail({ fieldConfig, field }: DynamicFieldProps) {
-  return (
-    <FormItem>
-      <FormLabel>{fieldConfig.label}</FormLabel>
-      <FormControl>
-        <Input placeholder={fieldConfig.placeholder || ""} {...field} type="email" />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )
-}
-
-export function DynamicNumber({ fieldConfig, field }: DynamicFieldProps) {
-  const numberFieldConfig = fieldConfig as FormField & {
-    min?: number
-    max?: number
-    step?: number
-  }
-
-  return (
-    <FormItem>
-      <FormLabel>{numberFieldConfig.label}</FormLabel>
-      <FormControl>
-        <Input
-          placeholder={numberFieldConfig.placeholder || ""}
-          {...field}
-          type="number"
-          min={numberFieldConfig.min}
-          max={numberFieldConfig.max}
-          step={numberFieldConfig.step}
-        />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )
-}
-
-export function DynamicPhone({ fieldConfig, field }: DynamicFieldProps) {
-  return (
-    <FormItem>
-      <FormLabel>{fieldConfig.label}</FormLabel>
-      <FormControl>
-        <Input placeholder={fieldConfig.placeholder || ""} {...field} type="tel" />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )
-}
-
-export function DynamicDate({ fieldConfig, field }: DynamicFieldProps) {
-  return (
-    <FormItem>
-      <FormLabel>{fieldConfig.label}</FormLabel>
-      <Popover>
-        <PopoverTrigger asChild>
-          <FormControl>
-            <Button variant={"outline"} className="w-full justify-start text-left font-normal">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
-            </Button>
-          </FormControl>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
-          <Calendar
-            mode="single"
-            selected={field.value ? new Date(field.value) : undefined}
-            onSelect={field.onChange}
-            initialFocus
-          />
-        </PopoverContent>
-      </Popover>
-      <FormMessage />
-    </FormItem>
-  )
-}
-
-export function DynamicTime({ fieldConfig, field }: DynamicFieldProps) {
-  return (
-    <FormItem>
-      <FormLabel>{fieldConfig.label}</FormLabel>
-      <FormControl>
-        <div className="flex items-center">
-          <Input placeholder={fieldConfig.placeholder || ""} {...field} type="time" />
-          <ClockIcon className="ml-2 h-4 w-4 text-muted-foreground" />
-        </div>
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )
-}
-
-export function DynamicFile({ fieldConfig, field }: DynamicFieldProps) {
-  const fileFieldConfig = fieldConfig as FormField & {
-    accept?: string
-    multiple?: boolean
-  }
-
-  return (
-    <FormItem>
-      <FormLabel>{fileFieldConfig.label}</FormLabel>
-      <FormControl>
-        <Input
-          type="file"
-          onChange={(e) => field.onChange(e.target.files)}
-          accept={fileFieldConfig.accept}
-          multiple={fileFieldConfig.multiple}
-        />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )
-}
-
-export function DynamicToggle({ fieldConfig, field }: DynamicFieldProps) {
-  return (
-    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-      <div className="space-y-0.5">
-        <FormLabel>{fieldConfig.label}</FormLabel>
-        {fieldConfig.placeholder && <FormDescription>{fieldConfig.placeholder}</FormDescription>}
-      </div>
-      <FormControl>
-        <Switch checked={field.value} onCheckedChange={field.onChange} />
-      </FormControl>
-    </FormItem>
-  )
-}
-
-export function DynamicSection({ fieldConfig }: DynamicFieldProps) {
-  return (
-    <div className="space-y-1">
-      <h3 className="text-lg font-semibold">{fieldConfig.label}</h3>
-      {fieldConfig.placeholder && <p className="text-sm text-muted-foreground">{fieldConfig.placeholder}</p>}
+    <div className="min-h-screen">
+      {children}
+      <Toaster richColors position="top-center" />
     </div>
   )
 }
 
-export function DynamicDivider() {
-  return <div className="border-t my-4" />
+// Component to determine which layout to use
+const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation()
+
+  // Define routes that should use full-screen layout
+  const fullScreenRoutes = ["/form-preview"]
+
+  const isFullScreen = fullScreenRoutes.some((route) => location.pathname.startsWith(route))
+
+  if (isFullScreen) {
+    return <FullScreenLayout>{children}</FullScreenLayout>
+  }
+
+  return <MainLayout>{children}</MainLayout>
+}
+
+export default function App() {
+  const [isLocaleReady, setIsLocaleReady] = useState(false)
+
+  useEffect(() => {
+    const loadPreferredLocale = async () => {
+      const savedLang = localStorage.getItem("lang") || "en"
+      setIsLocaleReady(false)
+      try {
+        const module = await localeMessages[savedLang]()
+        const messages = module.messages || module.default
+        i18n.load(savedLang, messages)
+        i18n.activate(savedLang)
+      } catch (error) {
+        console.error(`Failed to load locale ${savedLang}:`, error)
+        const fallback = await localeMessages["en"]()
+        i18n.load("en", fallback.messages || fallback.default)
+        i18n.activate("en")
+      } finally {
+        // Setup OpenAPI config after language loads
+        OpenAPI.BASE = CustomOpenAPIConfig.BASE
+        OpenAPI.VERSION = CustomOpenAPIConfig.VERSION
+        OpenAPI.TOKEN = CustomOpenAPIConfig.TOKEN
+        OpenAPI.WITH_CREDENTIALS = CustomOpenAPIConfig.WITH_CREDENTIALS
+        OpenAPI.CREDENTIALS = CustomOpenAPIConfig.CREDENTIALS
+        setIsLocaleReady(true)
+      }
+    }
+
+    loadPreferredLocale()
+  }, [])
+
+  if (!isLocaleReady) {
+    return <div>Loading translations...</div>
+  }
+
+  return (
+    <AvatarProvider>
+      <I18nProvider i18n={i18n}>
+        <ThemeProvider>
+          <LayoutWrapper>
+            <Routes>
+              <Route path="/" element={<FallbackRoot />} />
+              <Route path="/inbox" element={<Inbox />} />
+              <Route path="/signup" element={<SignUpForm />} />
+              <Route path="/signin" element={<SignInForm />} />
+              <Route path="/data" element={<UserTable />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/account" element={<Account />} />
+              <Route path="/calendar" element={<Calendar1 />} />
+              <Route path="/kanban" element={<KanbanBoard />} />
+              <Route path="/chart" element={<OrgChart />} />
+              <Route path="/billing" element={<InvoiceForm />} />
+              <Route path="/queries" element={<TicketingSystem />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/event" element={<FormTemplatesPage />} />
+              <Route path="/formbuilder/:id" element={<FormBuilder />} />
+              <Route path="/formbuilder/new" element={<FormBuilder />} />
+              <Route path="/forgot-password" element={<ForgotPasswordForm />} />
+              <Route path="/cities" element={<CitiesPage />} />
+              <Route path="/sop-list" element={<SopPage />} />
+              <Route path="/user" element={<UserManagementPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+              {/* Full-screen routes */}
+              <Route path="/form-preview/:id" element={<FormPreviewPage />} />
+            </Routes>
+          </LayoutWrapper>
+        </ThemeProvider>
+      </I18nProvider>
+    </AvatarProvider>
+  )
 }
