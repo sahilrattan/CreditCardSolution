@@ -1,168 +1,597 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import "./styles/CreditCardPage.css";
-import platinumRewards from "../assets/Standard-Chartered-platinum-rewards.avif";
-import goldCard from "../assets/gold-card.jpg";
-import studentCard from "../assets/student-card.jpg";
-import businessCard from "../assets/buisness-card.jpg";
-import travelCard from "../assets/travel-card.jpg";
-import eliteCard from "../assets/elite-card.jpg";
+"use client";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  DndContext,
+  type DragEndEvent,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { v4 as uuidv4 } from "uuid";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
+import { FieldPalette } from "@/components/form/fields-palette";
+import { FormPreview } from "@/components/form/FormPreviewPage";
+import { FieldEditor } from "@/components/form/field-editor";
+import { FormFieldType, type FormField } from "./types";
+import { toast } from "sonner";
 
-const creditCards = [
-  {
-    id: 1,
-    name: "Platinum Rewards Card",
-    image: platinumRewards,
-    details: "Earn 5x reward points on every purchase.",
-    info: "0% APR for the first 12 months.",
-    benefits: [
-      "5x points on all purchases",
-      "No annual fee first year",
-      "Free airport lounge access",
-      "24/7 concierge service"
-    ],
-    apr: "15.99% - 22.99% variable",
-    annualFee: "$95 (waived first year)",
-    creditScore: "Good to Excellent"
-  },
-  {
-    id: 2,
-    name: "Gold Cashback Card",
-    image: goldCard,
-    details: "5% cashback on dining and travel expenses.",
-    info: "Annual fee waived for the first year.",
-    benefits: [
-      "5% cashback on dining/travel",
-      "2% cashback on all other purchases",
-      "No foreign transaction fees",
-      "Travel insurance included"
-    ],
-    apr: "14.99% - 21.99% variable",
-    annualFee: "$0 first year, then $75",
-    creditScore: "Good"
-  },
-  {
-    id: 3,
-    name: "Student Credit Card",
-    image: studentCard,
-    details: "Special offers for students with no credit history.",
-    info: "Low annual fee and no foreign transaction fees.",
-    benefits: [
-      "Build credit history",
-      "1% cashback on all purchases",
-      "No credit history required",
-      "Free credit score monitoring"
-    ],
-    apr: "16.99% - 24.99% variable",
-    annualFee: "$25",
-    creditScore: "Limited/Bad"
-  },
-  {
-    id: 4,
-    name: "Business Advantage Card",
-    image: businessCard,
-    details: "Designed for small businesses with high credit limits.",
-    info: "Enjoy 2% cashback on office supplies and fuel.",
-    benefits: [
-      "Separate business expenses",
-      "Employee cards with limits",
-      "Quarterly spending reports",
-      "Double warranty protection"
-    ],
-    apr: "13.99% - 19.99% variable",
-    annualFee: "$125",
-    creditScore: "Excellent"
-  },
-  {
-    id: 5,
-    name: "Travel Explorer Card",
-    image: travelCard,
-    details: "Earn miles for every dollar spent.",
-    info: "No blackout dates on airline tickets.",
-    benefits: [
-      "2 miles per $1 spent",
-      "Free checked bags",
-      "TSA PreCheck credit",
-      "No foreign transaction fees"
-    ],
-    apr: "17.99% - 25.99% variable",
-    annualFee: "$99",
-    creditScore: "Good to Excellent"
-  },
-  {
-    id: 6,
-    name: "Premium Elite Card",
-    image: eliteCard,
-    details: "Exclusive concierge services and luxury benefits.",
-    info: "Priority airport lounge access worldwide.",
-    benefits: [
-      "Priority Pass membership",
-      "Hotel elite status",
-      "Travel credits",
-      "Premium customer service"
-    ],
-    apr: "16.99% - 23.99% variable",
-    annualFee: "$450",
-    creditScore: "Excellent"
+// Local storage helpers
+const saveFormToLocal = (formData: any) => {
+  try {
+    const existingForms = JSON.parse(localStorage.getItem("forms") || "[]");
+    const existingIndex = existingForms.findIndex((f: any) => f.id === formData.id);
+
+    if (existingIndex >= 0) {
+      existingForms[existingIndex] = formData;
+    } else {
+      existingForms.push(formData);
+    }
+
+    localStorage.setItem("forms", JSON.stringify(existingForms));
+    return true;
+  } catch (error) {
+    console.error("Error saving form:", error);
+    return false;
   }
-];
+};
 
-const ApplyCard = () => {
+const loadFormFromLocal = (id: string) => {
+  try {
+    const forms = JSON.parse(localStorage.getItem("forms") || "[]");
+    return forms.find((f: any) => f.id === id) || null;
+  } catch (error) {
+    console.error("Error loading form:", error);
+    return null;
+  }
+};
+
+// Mobile detection hook
+function useMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  return isMobile;
+}
+
+export default function FormBuilder() {
+  const { id } = useParams();
   const navigate = useNavigate();
+  const isMobile = useMobile();
 
-  const handleApplyClick = (card) => {
-    navigate(`/cards/${card.id}`, { state: { card } });
+  const [formId, setFormId] = useState<string>(id === "new" ? uuidv4() : id || uuidv4());
+  const [formFields, setFormFields] = useState<FormField[]>([]);
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [formName, setFormName] = useState("Untitled Form");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor)
+  );
+
+  useEffect(() => {
+    const loadForm = async () => {
+      try {
+        if (id === "new") {
+          setFormId(uuidv4());
+          setFormName("Untitled Form");
+          setFormFields([]);
+          setSelectedFieldId(null);
+          setIsInitialized(true);
+          return;
+        }
+
+        if (id) {
+          const formData = await loadFormFromLocal(id);
+          if (formData) {
+            setFormId(formData.id);
+            setFormName(formData.name || "Untitled Form");
+            setFormFields(formData.fields || []);
+            setIsInitialized(true);
+          } else {
+            toast.error("Form not found - creating new one");
+            navigate("/formbuilder/new", { replace: true });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading form:", error);
+        toast.error("Failed to load form");
+        navigate("/forms");
+      }
+    };
+
+    if (!isInitialized) {
+      loadForm();
+    }
+  }, [id, navigate, isInitialized]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over?.id === "form-drop-area") {
+      const fieldType = active.data.current?.type as FormFieldType;
+      const fieldLabel = active.data.current?.label as string;
+
+      const newField: FormField = {
+        id: uuidv4(),
+        type: fieldType,
+        label: fieldLabel,
+        placeholder: `Enter ${fieldLabel.toLowerCase()}`,
+        required: false,
+      };
+
+      if ([FormFieldType.Select, FormFieldType.RadioGroup].includes(fieldType)) {
+        newField.options = [
+          { label: "Option 1", value: "option1" },
+          { label: "Option 2", value: "option2" },
+        ];
+      }
+
+      setFormFields((prev) => [...prev, newField]);
+      setSelectedFieldId(newField.id);
+    }
   };
 
+  const handleUpdateField = (updated: FormField) => {
+    setFormFields((prev) =>
+      prev.map((field) => (field.id === updated.id ? updated : field))
+    );
+  };
+
+  const handleDeleteField = (deleteId: string) => {
+    setFormFields((prev) => prev.filter((f) => f.id !== deleteId));
+    if (selectedFieldId === deleteId) {
+      setSelectedFieldId(null);
+    }
+  };
+
+  const handleSaveForm = async () => {
+    if (formName.trim() === "") {
+      toast.error("Form name cannot be empty");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const payload = {
+        id: formId,
+        name: formName.trim(),
+        fields: formFields,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const success = saveFormToLocal(payload);
+      if (success) {
+        toast.success("Form saved successfully");
+        // Navigate to /event after successful save
+        navigate("/event");
+      } else {
+        throw new Error("Save failed");
+      }
+    } catch (error) {
+      console.error("Error saving form:", error);
+      toast.error("Failed to save form");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePreview = async () => {
+    if (formFields.length === 0) {
+      toast.error("Add at least one field to preview");
+      return;
+    }
+
+    await handleSaveForm();
+    navigate(`/preview/${formId}`);
+  };
+
+  const selectedField = formFields.find((f) => f.id === selectedFieldId);
+  const FieldEditorComponent = selectedField ? (
+    <FieldEditor
+      field={selectedField}
+      onUpdateField={handleUpdateField}
+      onDeleteField={handleDeleteField}
+    />
+  ) : (
+    <div className="flex items-center justify-center h-full text-muted-foreground">
+      Select a field to edit
+    </div>
+  );
+
   return (
-    <div className="credit-card-container">
-      <header className="page-header">
-        <h1>Welcome to Credit Card Solutions</h1>
-        <p>Your trusted partner for reliable credit card services and products</p>
-        <div className="header-buttons">
-          <button className="header-btn active">Explore Cards</button>
-          <button className="header-btn">Manage Account</button>
+    <div className="flex flex-col h-screen bg-background text-foreground">
+      {/* Header */}
+      <header className="border-b p-4 flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate("/forms")}>
+            Back
+          </Button>
+          <Label htmlFor="formName">Form Name:</Label>
+          <Input
+            id="formName"
+            value={formName}
+            onChange={(e) => setFormName(e.target.value)}
+            className="w-48"
+            placeholder="Enter form name"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handlePreview} 
+            disabled={formFields.length === 0}
+          >
+            Preview
+          </Button>
+          <Button 
+            onClick={handleSaveForm} 
+            disabled={isSaving}
+          >
+            {isSaving ? "Saving..." : "Save Form"}
+          </Button>
         </div>
       </header>
-      
-      <div className="main-content">
-        <h2>Choose Your Credit Card</h2>
-        <p className="subtitle">Compare features and benefits to find the perfect card for your needs</p>
-        
-        <div className="card-grid">
-          {creditCards.map((card) => (
-            <div key={card.id} className="credit-card">
-              <div className="card-header">
-                <h3>{card.name}</h3>
-                {card.id === 1 && <div className="card-badge">Popular</div>}
-              </div>
-              <img src={card.image} alt={card.name} className="card-image" />
-              <div className="card-details">
-                <p className="highlight">{card.details}</p>
-                <p>{card.info}</p>
-                <ul className="benefits-preview">
-                  {card.benefits.slice(0, 2).map((benefit, index) => (
-                    <li key={index}>✓ {benefit}</li>
-                  ))}
-                </ul>
-                <div className="card-specs">
-                  <p><strong>APR:</strong> {card.apr}</p>
-                  <p><strong>Annual Fee:</strong> {card.annualFee}</p>
-                  <p><strong>Credit Score:</strong> {card.creditScore}</p>
-                </div>
-              </div>
-              <button 
-                className="apply-btn"
-                onClick={() => handleApplyClick(card)}
-              >
-                Apply Now
-              </button>
-            </div>
-          ))}
-        </div>
+
+      {/* Main Layout */}
+      <div className="flex flex-1 overflow-hidden">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          {/* Left Sidebar */}
+          <aside className="w-full md:w-64 p-4 border-b md:border-r md:border-b-0 shrink-0 overflow-y-auto">
+            <FieldPalette />
+          </aside>
+
+          {/* Center: Form Preview */}
+          <main className="flex-1 p-4 overflow-y-auto">
+            <FormPreview
+              formId={formId}
+              formFields={formFields}
+              onFieldClick={setSelectedFieldId}
+              selectedFieldId={selectedFieldId}
+            />
+          </main>
+
+          {/* Right Sidebar: Field Editor */}
+          {isMobile ? (
+            <Drawer
+              open={!!selectedFieldId}
+              onOpenChange={(open) => !open && setSelectedFieldId(null)}
+            >
+              <DrawerContent className="h-[80vh]">
+                {FieldEditorComponent}
+              </DrawerContent>
+            </Drawer>
+          ) : (
+            <aside className="w-full md:w-80 p-4 border-t md:border-l md:border-t-0 shrink-0 overflow-y-auto">
+              {FieldEditorComponent}
+            </aside>
+          )}
+        </DndContext>
       </div>
     </div>
   );
-};
+}
 
-export default ApplyCard;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// "use client";
+// import { useState, useEffect } from "react";
+// import { useParams, useNavigate } from "react-router-dom";
+// import {
+//   DndContext,
+//   type DragEndEvent,
+//   closestCenter,
+//   KeyboardSensor,
+//   PointerSensor,
+//   useSensor,
+//   useSensors,
+// } from "@dnd-kit/core";
+// import { v4 as uuidv4 } from "uuid";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import { Label } from "@/components/ui/label";
+// import { Drawer, DrawerContent } from "@/components/ui/drawer";
+// import { FieldPalette } from "@/components/form/fields-palette";
+// import { FormPreview } from "@/components/form/FormPreviewPage";
+// import { FieldEditor } from "@/components/form/field-editor";
+// import { FormFieldType, type FormField } from "./types";
+// import { toast } from "sonner";
+
+// // Local storage helpers
+// const saveFormToLocal = (formData: any) => {
+//   try {
+//     const existingForms = JSON.parse(localStorage.getItem("forms") || "[]");
+//     const existingIndex = existingForms.findIndex((f: any) => f.id === formData.id);
+    
+//     if (existingIndex >= 0) {
+//       existingForms[existingIndex] = formData;
+//     } else {
+//       existingForms.push(formData);
+//     }
+    
+//     localStorage.setItem("forms", JSON.stringify(existingForms));
+//     return true;
+//   } catch (error) {
+//     console.error("Error saving form:", error);
+//     return false;
+//   }
+// };
+
+// const loadFormFromLocal = (id: string) => {
+//   try {
+//     const forms = JSON.parse(localStorage.getItem("forms") || "[]");
+//     return forms.find((f: any) => f.id === id) || null;
+//   } catch (error) {
+//     console.error("Error loading form:", error);
+//     return null;
+//   }
+// };
+
+// // Mobile detection hook
+// function useMobile() {
+//   const [isMobile, setIsMobile] = useState(false);
+//   useEffect(() => {
+//     const handleResize = () => setIsMobile(window.innerWidth < 768);
+//     handleResize();
+//     window.addEventListener("resize", handleResize);
+//     return () => window.removeEventListener("resize", handleResize);
+//   }, []);
+//   return isMobile;
+// }
+
+// export default function FormBuilder() {
+//   const { id } = useParams();
+//   const navigate = useNavigate();
+//   const isMobile = useMobile();
+
+//   const [formId, setFormId] = useState<string>(id === "new" ? uuidv4() : id || uuidv4());
+//   const [formFields, setFormFields] = useState<FormField[]>([]);
+//   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+//   const [formName, setFormName] = useState("Untitled Form");
+//   const [isSaving, setIsSaving] = useState(false);
+//   const [isInitialized, setIsInitialized] = useState(false);
+
+//   const sensors = useSensors(
+//     useSensor(PointerSensor),
+//     useSensor(KeyboardSensor)
+//   );
+
+//   // Load form from local storage
+//   useEffect(() => {
+//     const loadForm = async () => {
+//       try {
+//         if (id === "new") {
+//           // Initialize a completely new form
+//           setFormId(uuidv4());
+//           setFormName("Untitled Form");
+//           setFormFields([]);
+//           setSelectedFieldId(null);
+//           setIsInitialized(true);
+//           return;
+//         }
+
+//         if (id) {
+//           const formData = await loadFormFromLocal(id);
+//           if (formData) {
+//             setFormId(formData.id);
+//             setFormName(formData.name || "Untitled Form");
+//             setFormFields(formData.fields || []);
+//             setIsInitialized(true);
+//           } else {
+//             toast.error("Form not found - creating new one");
+//             navigate("/formbuilder/new", { replace: true });
+//           }
+//         }
+//       } catch (error) {
+//         console.error("Error loading form:", error);
+//         toast.error("Failed to load form");
+//         navigate("/forms");
+//       }
+//     };
+
+//     if (!isInitialized) {
+//       loadForm();
+//     }
+//   }, [id, navigate, isInitialized]);
+
+//   // Add field from drag-and-drop
+//   const handleDragEnd = (event: DragEndEvent) => {
+//     const { active, over } = event;
+//     if (over?.id === "form-drop-area") {
+//       const fieldType = active.data.current?.type as FormFieldType;
+//       const fieldLabel = active.data.current?.label as string;
+
+//       const newField: FormField = {
+//         id: uuidv4(),
+//         type: fieldType,
+//         label: fieldLabel,
+//         placeholder: `Enter ${fieldLabel.toLowerCase()}`,
+//         required: false,
+//       };
+
+//       if ([FormFieldType.Select, FormFieldType.RadioGroup].includes(fieldType)) {
+//         newField.options = [
+//           { label: "Option 1", value: "option1" },
+//           { label: "Option 2", value: "option2" },
+//         ];
+//       }
+
+//       setFormFields((prev) => [...prev, newField]);
+//       setSelectedFieldId(newField.id);
+//     }
+//   };
+
+//   // Update individual field
+//   const handleUpdateField = (updated: FormField) => {
+//     setFormFields((prev) =>
+//       prev.map((field) => (field.id === updated.id ? updated : field))
+//     );
+//   };
+
+//   const handleDeleteField = (deleteId: string) => {
+//     setFormFields((prev) => prev.filter((f) => f.id !== deleteId));
+//     if (selectedFieldId === deleteId) {
+//       setSelectedFieldId(null);
+//     }
+//   };
+
+//   const handleSaveForm = async () => {
+//     if (formName.trim() === "") {
+//       toast.error("Form name cannot be empty");
+//       return;
+//     }
+
+//     setIsSaving(true);
+//     try {
+//       const payload = {
+//         id: formId,
+//         name: formName.trim(),
+//         fields: formFields,
+//         updatedAt: new Date().toISOString(),
+//       };
+
+//       const success = saveFormToLocal(payload);
+//       if (success) {
+//         toast.success("Form saved successfully");
+//         // If this was a new form, update the URL with the saved ID
+//         if (id === "new") {
+//           navigate(`/formbuilder/${formId}`, { replace: true });
+//         }
+//       } else {
+//         throw new Error("Save failed");
+//       }
+//     } catch (error) {
+//       console.error("Error saving form:", error);
+//       toast.error("Failed to save form");
+//     } finally {
+//       setIsSaving(false);
+//     }
+//   };
+
+//   const handlePreview = async () => {
+//     if (formFields.length === 0) {
+//       toast.error("Add at least one field to preview");
+//       return;
+//     }
+
+//     await handleSaveForm();
+//     navigate(`/preview/${formId}`);
+//   };
+
+//   const selectedField = formFields.find((f) => f.id === selectedFieldId);
+//   const FieldEditorComponent = selectedField ? (
+//     <FieldEditor
+//       field={selectedField}
+//       onUpdateField={handleUpdateField}
+//       onDeleteField={handleDeleteField}
+//     />
+//   ) : (
+//     <div className="flex items-center justify-center h-full text-muted-foreground">
+//       Select a field to edit
+//     </div>
+//   );
+
+//   return (
+//     <div className="flex flex-col h-screen bg-background text-foreground">
+//       {/* Header */}
+//       <header className="border-b p-4 flex justify-between items-center">
+//         <div className="flex items-center gap-4">
+//           <Button variant="outline" onClick={() => navigate("/forms")}>
+//             Back
+//           </Button>
+//           <Label htmlFor="formName">Form Name:</Label>
+//           <Input
+//             id="formName"
+//             value={formName}
+//             onChange={(e) => setFormName(e.target.value)}
+//             className="w-48"
+//             placeholder="Enter form name"
+//           />
+//         </div>
+//         <div className="flex gap-2">
+//           <Button 
+//             variant="outline" 
+//             onClick={handlePreview} 
+//             disabled={formFields.length === 0}
+//           >
+//             Preview
+//           </Button>
+//           <Button 
+//             onClick={handleSaveForm} 
+//             disabled={isSaving}
+//           >
+//             {isSaving ? "Saving..." : "Save Form"}
+//           </Button>
+//         </div>
+//       </header>
+
+//       {/* Main Layout */}
+//       <div className="flex flex-1 overflow-hidden">
+//         <DndContext
+//           sensors={sensors}
+//           collisionDetection={closestCenter}
+//           onDragEnd={handleDragEnd}
+//         >
+//           {/* Left Sidebar */}
+//           <aside className="w-full md:w-64 p-4 border-b md:border-r md:border-b-0 shrink-0 overflow-y-auto">
+//             <FieldPalette />
+//           </aside>
+
+//           {/* Center: Form Preview */}
+//           <main className="flex-1 p-4 overflow-y-auto">
+//             <FormPreview
+//               formId={formId}
+//               formFields={formFields}
+//               onFieldClick={setSelectedFieldId}
+//               selectedFieldId={selectedFieldId}
+//             />
+//           </main>
+
+//           {/* Right Sidebar: Field Editor */}
+//           {isMobile ? (
+//             <Drawer
+//               open={!!selectedFieldId}
+//               onOpenChange={(open) => !open && setSelectedFieldId(null)}
+//             >
+//               <DrawerContent className="h-[80vh]">
+//                 {FieldEditorComponent}
+//               </DrawerContent>
+//             </Drawer>
+//           ) : (
+//             <aside className="w-full md:w-80 p-4 border-t md:border-l md:border-t-0 shrink-0 overflow-y-auto">
+//               {FieldEditorComponent}
+//             </aside>
+//           )}
+//         </DndContext>
+//       </div>
+//     </div>
+//   );
+// }
