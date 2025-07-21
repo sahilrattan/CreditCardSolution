@@ -1,147 +1,212 @@
+"use client";
 import React from "react";
-import { Page, Text, View, Document, StyleSheet, PDFViewer } from "@react-pdf/renderer";
+import { useDraggable } from "@dnd-kit/core";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormFieldType, type FormFieldTypeEnum } from "./types";
+import {
+  FileInputIcon,
+  TextIcon,
+  CheckIcon,
+  ListIcon,
+  RadioIcon,
+  CalendarIcon,
+  ToggleRightIcon,
+  ImageIcon,
+  HashIcon,
+  MailIcon,
+  PhoneIcon,
+  ClockIcon,
+  ListOrderedIcon,
+} from "lucide-react";
 
-// Create styles
-const styles = StyleSheet.create({
-  page: {
-    flexDirection: "column",
-    backgroundColor: "#FFFFFF",
-    padding: 40
-  },
-  header: {
-    marginBottom: 20,
-    textAlign: "center"
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 10
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 20
-  },
-  section: {
-    marginBottom: 15
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-    borderBottom: "1px solid #000",
-    paddingBottom: 5
-  },
-  row: {
-    flexDirection: "row",
-    marginBottom: 5
-  },
-  label: {
-    width: "40%",
-    fontSize: 12,
-    fontWeight: "bold"
-  },
-  value: {
-    width: "60%",
-    fontSize: 12
-  },
-  footer: {
-    marginTop: 30,
-    fontSize: 10,
-    textAlign: "center"
-  }
-});
+interface FieldPaletteItemProps {
+  type: FormFieldTypeEnum;
+  label: string;
+  icon: React.ReactNode;
+  category: string;
+}
 
-// Create Document Component
-const ApplicationPDF = ({ data }) => (
-  <Document>
-    <Page size="A4" style={styles.page}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Credit Card Application</Text>
-        <Text style={styles.subtitle}>{data.cardType}</Text>
-      </View>
+const fieldCategories = [
+  "Basic Inputs",
+  "Selection Controls",
+  "Date & Time",
+  "Media",
+  "Advanced",
+];
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Application Details</Text>
-        <View style={styles.row}>
-          <Text style={styles.label}>Application ID:</Text>
-          <Text style={styles.value}>{data.id}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Status:</Text>
-          <Text style={styles.value}>{data.status}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Date Submitted:</Text>
-          <Text style={styles.value}>{new Date().toLocaleDateString()}</Text>
-        </View>
-      </View>
+const fieldPaletteItems: FieldPaletteItemProps[] = [
+  // Basic Inputs
+  {
+    type: FormFieldType.Text,
+    label: "Text Input",
+    icon: <FileInputIcon className="h-4 w-4" />,
+    category: "Basic Inputs",
+  },
+  {
+    type: FormFieldType.Textarea,
+    label: "Textarea",
+    icon: <TextIcon className="h-4 w-4" />,
+    category: "Basic Inputs",
+  },
+  {
+    type: "email",
+    label: "Email Input",
+    icon: <MailIcon className="h-4 w-4" />,
+    category: "Basic Inputs",
+  },
+  {
+    type: "number",
+    label: "Number Input",
+    icon: <HashIcon className="h-4 w-4" />,
+    category: "Basic Inputs",
+  },
+  {
+    type: "phone",
+    label: "Phone Input",
+    icon: <PhoneIcon className="h-4 w-4" />,
+    category: "Basic Inputs",
+  },
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Personal Information</Text>
-        <View style={styles.row}>
-          <Text style={styles.label}>Full Name:</Text>
-          <Text style={styles.value}>{data.fullName}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Email:</Text>
-          <Text style={styles.value}>{data.email}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Phone:</Text>
-          <Text style={styles.value}>{data.phone}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Date of Birth:</Text>
-          <Text style={styles.value}>{new Date(data.dob).toLocaleDateString()}</Text>
-        </View>
-      </View>
+  // Selection Controls
+  {
+    type: FormFieldType.Select,
+    label: "Dropdown",
+    icon: <ListIcon className="h-4 w-4" />,
+    category: "Selection Controls",
+  },
+  {
+    type: FormFieldType.Checkbox,
+    label: "Checkbox",
+    icon: <CheckIcon className="h-4 w-4" />,
+    category: "Selection Controls",
+  },
+  {
+    type: FormFieldType.RadioGroup,
+    label: "Radio Group",
+    icon: <RadioIcon className="h-4 w-4" />,
+    category: "Selection Controls",
+  },
+  {
+    type: "toggle",
+    label: "Toggle Switch",
+    icon: <ToggleRightIcon className="h-4 w-4" />,
+    category: "Selection Controls",
+  },
+  {
+    type: "multiselect",
+    label: "Multi-Select",
+    icon: <ListOrderedIcon className="h-4 w-4" />,
+    category: "Selection Controls",
+  },
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Address Information</Text>
-        <View style={styles.row}>
-          <Text style={styles.label}>Address:</Text>
-          <Text style={styles.value}>{data.address}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>City:</Text>
-          <Text style={styles.value}>{data.city}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>State:</Text>
-          <Text style={styles.value}>{data.state}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Pincode:</Text>
-          <Text style={styles.value}>{data.pincode}</Text>
-        </View>
-      </View>
+  // Date & Time
+  {
+    type: "date",
+    label: "Date Picker",
+    icon: <CalendarIcon className="h-4 w-4" />,
+    category: "Date & Time",
+  },
+  {
+    type: "time",
+    label: "Time Picker",
+    icon: <ClockIcon className="h-4 w-4" />,
+    category: "Date & Time",
+  },
+  {
+    type: "datetime",
+    label: "Date & Time",
+    icon: <CalendarIcon className="h-4 w-4" />,
+    category: "Date & Time",
+  },
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Financial Information</Text>
-        <View style={styles.row}>
-          <Text style={styles.label}>Employment Type:</Text>
-          <Text style={styles.value}>{data.employment}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Company Name:</Text>
-          <Text style={styles.value}>{data.company}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Annual Income:</Text>
-          <Text style={styles.value}>₹{parseFloat(data.income).toLocaleString()}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>PAN Number:</Text>
-          <Text style={styles.value}>{data.pan}</Text>
-        </View>
-      </View>
+  // Media
+  {
+    type: "file",
+    label: "File Upload",
+    icon: <FileInputIcon className="h-4 w-4" />,
+    category: "Media",
+  },
+  {
+    type: "image",
+    label: "Image Upload",
+    icon: <ImageIcon className="h-4 w-4" />,
+    category: "Media",
+  },
 
-      <View style={styles.footer}>
-        <Text>This document is generated for reference purposes only</Text>
-        <Text>© {new Date().getFullYear()} Credit Card Services</Text>
-      </View>
-    </Page>
-  </Document>
-);
+  // Advanced
+  {
+    type: "section",
+    label: "Section Header",
+    icon: <TextIcon className="h-4 w-4" />,
+    category: "Advanced",
+  },
+  {
+    type: "divider",
+    label: "Divider",
+    icon: <div className="h-4 w-4 border-t-2 border-gray-400" />,
+    category: "Advanced",
+  },
+];
 
-export default ApplicationPDF;
+export function FieldPalette() {
+  return (
+    <Card className="h-full overflow-y-auto">
+      <CardHeader>
+        <CardTitle className="text-lg">Form Fields</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {fieldCategories.map((category) => {
+          const categoryFields = fieldPaletteItems.filter(
+            (field) => field.category === category
+          );
+          
+          if (categoryFields.length === 0) return null;
+
+          return (
+            <div key={category} className="space-y-2">
+              <h3 className="text-sm font-medium text-muted-foreground">
+                {category}
+              </h3>
+              <div className="grid grid-cols-1 gap-2">
+                {categoryFields.map((item) => (
+                  <DraggableFieldItem
+                    key={item.type}
+                    type={item.type}
+                    label={item.label}
+                    icon={item.icon}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DraggableFieldItem({ type, label, icon }: Omit<FieldPaletteItemProps, 'category'>) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: `draggable-${type}`,
+    data: { type, label },
+  });
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className="flex cursor-grab items-center gap-3 rounded-md border p-3 text-sm transition-colors hover:bg-muted/50 active:bg-muted"
+    >
+      <span className="flex-shrink-0 text-muted-foreground">{icon}</span>
+      <span>{label}</span>
+    </div>
+  );
+}
