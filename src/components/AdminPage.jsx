@@ -1,211 +1,227 @@
-import { useEffect, useState } from "react";
-import styles from "./styles/AdminPage.module.css";
+"use client";
 
-const AdminPage = () => {
-  const [signupUsers, setSignupUsers] = useState([]);
-  const [cardApplicants, setCardApplicants] = useState([]);
-  const [statusUpdateMsg, setStatusUpdateMsg] = useState("");
-  const [loading, setLoading] = useState({
-    users: true,
-    applicants: true
-  });
-  const [error, setError] = useState({
-    users: null,
-    applicants: null
-  });
+import type React from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  type FormField,
+  type FormFieldOption,
+  FormFieldType,
+  type SelectField,
+  type RadioGroupField,
+} from "./types";
+import { PlusIcon, TrashIcon } from "lucide-react";
+import { useState } from "react";
 
-  // Fetch Signup Users
-  const fetchSignupUsers = async () => {
-    try {
-      setLoading(prev => ({ ...prev, users: true }));
-      setError(prev => ({ ...prev, users: null }));
+interface FieldEditorProps {
+  field: FormField | null;
+  onUpdateField: (field: FormField) => void;
+  onDeleteField: (id: string) => void;
+}
 
-      const res = await fetch("http://localhost:5000/api/users");
-      if (!res.ok) throw new Error(`Failed to fetch users: ${res.status}`);
-      
-      const data = await res.json();
-      setSignupUsers(data);
-    } catch (err) {
-      console.error("Error fetching users:", err);
-      setError(prev => ({ ...prev, users: err.message }));
-    } finally {
-      setLoading(prev => ({ ...prev, users: false }));
+export function FieldEditor({
+  field,
+  onUpdateField,
+  onDeleteField,
+}: FieldEditorProps) {
+  const [newOptionLabel, setNewOptionLabel] = useState("");
+  const [newOptionValue, setNewOptionValue] = useState("");
+
+  if (!field) {
+    return (
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle className="text-lg">Field Properties</CardTitle>
+          <CardDescription>
+            Select a field on the form to edit its properties.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex h-[calc(100%-100px)] items-center justify-center text-muted-foreground">
+          No field selected.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    onUpdateField({ ...field, [e.target.name]: e.target.value } as FormField);
+  };
+
+  const handleSwitchChange = (checked: boolean) => {
+    onUpdateField({ ...field, required: checked } as FormField);
+  };
+
+  const handleAddOption = () => {
+    if (newOptionLabel.trim() && newOptionValue.trim()) {
+      const newOption: FormFieldOption = {
+        label: newOptionLabel.trim(),
+        value: newOptionValue.trim(),
+      };
+      const currentOptions =
+        (field as SelectField | RadioGroupField).options || [];
+      onUpdateField({
+        ...field,
+        options: [...currentOptions, newOption],
+      } as FormField);
+      setNewOptionLabel("");
+      setNewOptionValue("");
     }
   };
 
-  // Fetch Credit Card Applicants
-  const fetchApplicants = async () => {
-    try {
-      setLoading(prev => ({ ...prev, applicants: true }));
-      setError(prev => ({ ...prev, applicants: null }));
-
-      const res = await fetch("http://localhost:5000/api/credit-card-applications");
-      if (!res.ok) throw new Error(`Failed to fetch applicants: ${res.status}`);
-
-      const data = await res.json();
-      setCardApplicants(data);
-    } catch (err) {
-      console.error("Error fetching applicants:", err);
-      setError(prev => ({ ...prev, applicants: err.message }));
-    } finally {
-      setLoading(prev => ({ ...prev, applicants: false }));
-    }
+  const handleDeleteOption = (index: number) => {
+    const currentOptions =
+      (field as SelectField | RadioGroupField).options || [];
+    const updatedOptions = currentOptions.filter((_, i) => i !== index);
+    onUpdateField({
+      ...field,
+      options: updatedOptions,
+    } as FormField);
   };
-
-  // Update Verification Status
-  const updateStatus = async (id, newStatus) => {
-    try {
-      const res = await fetch(`http://localhost:5000/api/credit-card-applications/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!res.ok) throw new Error(`Status update failed: ${res.status}`);
-
-      const result = await res.json();
-      setStatusUpdateMsg(result.message || "Status updated successfully!");
-      setTimeout(() => setStatusUpdateMsg(""), 3000);
-      fetchApplicants();
-    } catch (err) {
-      console.error("Status update error:", err);
-      setStatusUpdateMsg(`Error: ${err.message}`);
-    }
-  };
-
-  // Handle user deletion
-  const handleDeleteUser = async (id) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
-      try {
-        const res = await fetch(`http://localhost:5000/api/users/${id}`, {
-          method: "DELETE",
-        });
-
-        if (!res.ok) throw new Error(`Failed to delete user: ${res.status}`);
-
-        setSignupUsers(prev => prev.filter(user => user.id !== id));
-        setStatusUpdateMsg("User deleted successfully!");
-        setTimeout(() => setStatusUpdateMsg(""), 3000);
-      } catch (err) {
-        console.error("Error deleting user:", err);
-        setStatusUpdateMsg(`Error: ${err.message}`);
-      }
-    }
-  };
-
-  useEffect(() => {
-    fetchSignupUsers();
-    fetchApplicants();
-  }, []);
 
   return (
-    <div className={styles.adminPage}>
-      <h1>Admin Dashboard</h1>
-
-      {/* Status Message */}
-      {statusUpdateMsg && (
-        <div className={`${styles.statusMsg} ${statusUpdateMsg.includes('Error') ? styles.error : styles.success}`}>
-          {statusUpdateMsg}
+    <Card className="h-full overflow-y-auto">
+      <CardHeader>
+        <CardTitle className="text-lg">Edit Field: {field.label}</CardTitle>
+        <CardDescription>
+          Modify the properties of the selected form field.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="label">Label</Label>
+          <Input
+            id="label"
+            name="label"
+            value={field.label}
+            onChange={handleInputChange}
+            placeholder="Enter field label"
+          />
         </div>
-      )}
+        <div>
+          <Label htmlFor="placeholder">Placeholder</Label>
+          {field.type === FormFieldType.Textarea ? (
+            <Textarea
+              id="placeholder"
+              name="placeholder"
+              value={field.placeholder || ""}
+              onChange={handleInputChange}
+              placeholder="Enter placeholder text"
+            />
+          ) : (
+            <Input
+              id="placeholder"
+              name="placeholder"
+              value={field.placeholder || ""}
+              onChange={handleInputChange}
+              placeholder="Enter placeholder text"
+            />
+          )}
+        </div>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="required">Required</Label>
+          <Switch
+            id="required"
+            checked={field.required || false}
+            onCheckedChange={handleSwitchChange}
+          />
+        </div>
 
-      {/* Signup Users */}
-      <section>
-        <h2>Signup Users</h2>
-        {loading.users ? (
-          <div className={styles.loading}>Loading users...</div>
-        ) : error.users ? (
-          <div className={styles.error}>Error: {error.users}</div>
-        ) : signupUsers.length === 0 ? (
-          <div className={styles.noData}>No signup users found.</div>
-        ) : (
-          <table className={styles.adminTable}>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {signupUsers.map(user => (
-                <tr key={user.id}>
-                  <td>{user.id}</td>
-                  <td>{user.email}</td>
-                  <td>{user.phone || 'N/A'}</td>
-                  <td>
-                    <div className={styles.actionButtons}>
-                      <button className={styles.editBtn}>Edit</button>
-                      <button 
-                        className={styles.deleteBtn}
-                        onClick={() => handleDeleteUser(user.id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      {/* Credit Card Applicants */}
-      <section>
-        <h2>Credit Card Applicants</h2>
-        {loading.applicants ? (
-          <div className={styles.loading}>Loading applicants...</div>
-        ) : error.applicants ? (
-          <div className={styles.error}>Error: {error.applicants}</div>
-        ) : cardApplicants.length === 0 ? (
-          <div className={styles.noData}>No applicants yet.</div>
-        ) : (
+        {(field.type === FormFieldType.Select ||
+          field.type === FormFieldType.RadioGroup) && (
           <>
-            <table className={styles.adminTable}>
-              <thead>
-                <tr>
-                  <th>Ref ID</th>
-                  <th>Name</th>
-                  <th>Card</th>
-                  <th>Status</th>
-                  <th>Change Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cardApplicants.map(app => (
-                  <tr key={app.id}>
-                    <td>{app.id}</td>
-                    <td>{app.full_name}</td>
-                    <td>{app.card_type}</td>
-                    <td>
-                      <span className={`status-${app.status.toLowerCase()}`}>
-                        {app.status}
-                      </span>
-                    </td>
-                    <td>
-                      <select
-                        value={app.status}
-                        onChange={(e) => updateStatus(app.id, e.target.value)}
-                        className={styles.statusSelect}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Separator />
+            <h3 className="text-md font-semibold">Options</h3>
+            <div className="space-y-2">
+              {(field as SelectField | RadioGroupField).options?.map(
+                (option, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      value={option.label}
+                      onChange={(e) => {
+                        const updatedOptions = [
+                          ...((field as SelectField | RadioGroupField)
+                            .options || []),
+                        ];
+                        updatedOptions[index] = {
+                          ...updatedOptions[index],
+                          label: e.target.value,
+                        };
+                        onUpdateField({
+                          ...field,
+                          options: updatedOptions,
+                        } as FormField);
+                      }}
+                      placeholder="Option Label"
+                    />
+                    <Input
+                      value={option.value}
+                      onChange={(e) => {
+                        const updatedOptions = [
+                          ...((field as SelectField | RadioGroupField)
+                            .options || []),
+                        ];
+                        updatedOptions[index] = {
+                          ...updatedOptions[index],
+                          value: e.target.value,
+                        };
+                        onUpdateField({
+                          ...field,
+                          options: updatedOptions,
+                        } as FormField);
+                      }}
+                      placeholder="Option Value"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteOption(index)}
+                    >
+                      <TrashIcon className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                )
+              )}
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newOptionLabel}
+                  onChange={(e) => setNewOptionLabel(e.target.value)}
+                  placeholder="New Option Label"
+                />
+                <Input
+                  value={newOptionValue}
+                  onChange={(e) => setNewOptionValue(e.target.value)}
+                  placeholder="New Option Value"
+                />
+                <Button variant="outline" size="icon" onClick={handleAddOption}>
+                  <PlusIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </>
         )}
-      </section>
-    </div>
-  );
-};
 
-export default AdminPage;
+        <Separator />
+        <Button
+          variant="destructive"
+          className="w-full"
+          onClick={() => onDeleteField(field.id)}
+        >
+          Delete Field
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
