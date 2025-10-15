@@ -11,6 +11,7 @@ import { UserService } from "@/api/services/UserService";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { UpdateTicketStatusCommand } from "@/api/models/UpdateTicketStatusCommand";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -45,6 +46,7 @@ import {
   XCircle,
   MoreHorizontal,
   Pencil,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -59,6 +61,16 @@ import { toast } from "sonner";
 import type { CreateDocumentUrlCommand } from "@/api/models/CreateDocumentUrlCommand";
 import { DocumentsService } from "@/api/services/DocumentsService";
 import type { UpdateTicketCommand } from "@/api/models/UpdateTicketCommand";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/utils/cn";
+import type { DateRange } from "react-day-picker";
+import { Loader2 } from "lucide-react"; // Import a spinner icon for the loader
 
 const API_VERSION = "1";
 
@@ -72,6 +84,7 @@ export default function TicketManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -98,85 +111,93 @@ export default function TicketManagement() {
   >([]);
   const [usersLookup, setUsersLookup] = useState<UserLookup[]>([]);
 
-const fetchAllData = async () => {
-  setIsLoading(true);
-  try {
-    // Step 1: Fetch the logged-in user's details
-    const loggedInUserRes = await UserService.getLoggedInUser(API_VERSION);
-    const loggedInUser = loggedInUserRes.data; // loggedInUserRes.data is a UserDetailVM object
-
-    if (!loggedInUser || !loggedInUser.id) {
-      throw new Error("Failed to fetch logged-in user ID");
-    }
-
-    const userId = loggedInUser.id;
-
-    console.log("Fetching roles for user ID:", userId);
-
-    // Step 2: Fetch user roles using getUserRoles API
-    const rolesRes = await UserService.getUserRoles(API_VERSION, userId);
-    const assignedRoles = rolesRes?.data || [];
-    const isOperationHead = assignedRoles.includes("OperationHead");
-
-    console.log("Assigned Roles:", assignedRoles);
-    console.log("Is Operation Head?", isOperationHead);
-
-    // Step 3: Fetch tickets based on role
-    let ticketsRes;
-    if (isOperationHead) {
-      // Fetch all tickets if OperationHead
-      ticketsRes = await TicketService.getApiVTicket(API_VERSION);
-    } else {
-      // Fetch tickets assigned to the current user otherwise
-      ticketsRes = await TicketService.getTicketListByUser(API_VERSION, {
-        userId: userId,
-      });
-    }
-
-    setTickets(
-      (ticketsRes.data || []).map((t) => ({ ...t, id: t.ticketId }))
-    );
-
-    // Step 4: Fetch lookup data in parallel
-    const [prioritiesRes, statusesRes, typesRes, usersRes] = await Promise.all([
-      TicketPriorityService.getApiVTicketPriority(API_VERSION),
-      TicketStatusService.getApiVTicketStatus(API_VERSION),
-      TicketTypeService.getApiVTicketType(API_VERSION),
-      UserService.getApiVUser(API_VERSION),
-    ]);
-
-    setTicketPrioritiesLookup(prioritiesRes.data || []);
-    setTicketStatusesLookup(statusesRes.data || []);
-    setTicketTypesLookup(typesRes.data || []);
-    setUsersLookup(
-      (usersRes.data || []).map((user: any) => ({
-        id: user.id,
-        email: user.email,
-      }))
-    );
-
-    // Step 5: Fetch contracts with error handling
+  const fetchAllData = async () => {
+    setIsLoading(true);
     try {
-      const contractsRes = await ContractService.getApiVContract(API_VERSION);
-      const mappedContracts = (contractsRes.data || []).map((contract: any) => ({
-        contractId: contract.contractID,
-        name: contract.name,
-      }));
-      setContractsLookup(mappedContracts);
-    } catch (contractError) {
-      console.error("Failed to fetch contracts:", contractError);
-      toast.error(
-        "Failed to fetch contracts. Contract dropdown will be empty."
+      // Step 1: Fetch the logged-in user's details
+      const loggedInUserRes = await UserService.getLoggedInUser(API_VERSION);
+      const loggedInUser = loggedInUserRes.data;
+
+      if (!loggedInUser || !loggedInUser.id) {
+        throw new Error("Failed to fetch logged-in user ID");
+      }
+
+      const userId = loggedInUser.id;
+
+      console.log("Fetching roles for user ID:", userId);
+
+      // Step 2: Fetch user roles using getUserRoles API
+      const rolesRes = await UserService.getUserRoles(API_VERSION, userId);
+      const assignedRoles = rolesRes?.data || [];
+      const isOperationHead = assignedRoles.includes("OperationHead");
+
+      console.log("Assigned Roles:", assignedRoles);
+      console.log("Is Operation Head?", isOperationHead);
+
+      // Step 3: Fetch tickets based on role
+      let ticketsRes;
+      if (isOperationHead) {
+        // Fetch all tickets if OperationHead
+        ticketsRes = await TicketService.getApiVTicket(API_VERSION);
+      } else {
+        // Fetch tickets assigned to the current user otherwise
+        ticketsRes = await TicketService.getTicketListByUser(API_VERSION, {
+          userId: userId,
+        });
+        if (!ticketsRes.data || ticketsRes.data.length === 0) {
+          toast.error("No tickets found for the user.");
+          setTickets([]);
+          return;
+        }
+      }
+
+      setTickets(
+        (ticketsRes.data || []).map((t) => ({ ...t, id: t.ticketId }))
       );
-      setContractsLookup([]);
+
+      // Step 4: Fetch lookup data in parallel
+      const [prioritiesRes, statusesRes, typesRes, usersRes] =
+        await Promise.all([
+          TicketPriorityService.getApiVTicketPriority(API_VERSION),
+          TicketStatusService.getApiVTicketStatus(API_VERSION),
+          TicketTypeService.getApiVTicketType(API_VERSION),
+          UserService.getApiVUser(API_VERSION),
+        ]);
+
+      setTicketPrioritiesLookup(prioritiesRes.data || []);
+      setTicketStatusesLookup(statusesRes.data || []);
+      setTicketTypesLookup(typesRes.data || []);
+      setUsersLookup(
+        (usersRes.data || []).map((user: any) => ({
+          id: user.id,
+          email: user.email,
+        }))
+      );
+
+      // Step 5: Fetch contracts with error handling
+      try {
+        const contractsRes = await ContractService.getApiVContract(API_VERSION);
+        const mappedContracts = (contractsRes.data || []).map(
+          (contract: any) => ({
+            contractId: contract.contractID,
+            name: contract.name,
+          })
+        );
+        setContractsLookup(mappedContracts);
+      } catch (contractError) {
+        console.error("Failed to fetch contracts:", contractError);
+        toast.error(
+          "Failed to fetch contracts. Contract dropdown will be empty."
+        );
+        setContractsLookup([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch initial data:", error);
+      toast.error("Failed to fetch initial data.");
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Failed to fetch initial data:", error);
-    toast.error("Failed to fetch initial data.");
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const fetchMediaUnits = async (contractId?: string) => {
     if (!contractId) {
@@ -277,8 +298,21 @@ const fetchAllData = async () => {
     const matchesPriority =
       priorityFilter === "all" || priorityName === priorityFilter;
 
-    return matchesSearch && matchesStatus && matchesPriority;
+    let matchesDate = true;
+    if (dateRange?.from && dateRange?.to && ticket.createdDate) {
+      const created = new Date(ticket.createdDate);
+      const from = new Date(dateRange.from);
+      const to = new Date(dateRange.to);
+      to.setHours(23, 59, 59, 999); // Include end of day
+      matchesDate = created >= from && created <= to;
+    }
+
+    return matchesSearch && matchesStatus && matchesPriority && matchesDate;
   });
+
+  const handleClearDateRange = () => {
+    setDateRange(undefined);
+  };
 
   const handleCreateTicket = async (
     ticketData: Partial<Ticket> & {
@@ -452,6 +486,19 @@ const fetchAllData = async () => {
         return;
       }
 
+      // Check if status is being updated
+      if (newStatusId !== currentTicket.ticketStatusId) {
+        // Call putApiVTicketStatus for status update
+        const statusUpdateData: UpdateTicketStatusCommand = {
+          ticketId: ticketIdFromComponent,
+          ticketStatusId: newStatusId,
+          name: getStatusName(newStatusId),
+        };
+        await TicketService.updateStatus(API_VERSION, statusUpdateData);
+        toast.success("Ticket status updated successfully");
+      }
+
+      // Update other ticket details using putApiVTicket (existing logic)
       const updatedTicketData: UpdateTicketCommand = {
         ...currentTicket,
         id: currentTicket.ticketId,
@@ -637,7 +684,8 @@ const fetchAllData = async () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
+      {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Support Tickets</h1>
@@ -651,21 +699,22 @@ const fetchAllData = async () => {
         </Button>
       </div>
 
+      {/* Filters and Search */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
+            <div className="relative flex-1 w-full sm:w-auto">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search tickets, customers, or ticket IDs..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 w-full sm:w-[300px]"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-full sm:w-[140px] text-center sm:text-left">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
@@ -682,7 +731,9 @@ const fetchAllData = async () => {
                 </SelectContent>
               </Select>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-full sm:w-[140px] text-center sm:text-left">
+                                    <Filter className="h-4 w-4 mr-2" />
+
                   <SelectValue placeholder="All Priority" />
                 </SelectTrigger>
                 <SelectContent>
@@ -697,14 +748,62 @@ const fetchAllData = async () => {
                   ))}
                 </SelectContent>
               </Select>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full sm:w-[240px] justify-start text-left font-normal",
+                        !dateRange && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange?.from ? (
+                        dateRange.to ? (
+                          <>
+                            {format(dateRange.from, "LLL dd, y")} -{" "}
+                            {format(dateRange.to, "LLL dd, y")}
+                          </>
+                        ) : (
+                          format(dateRange.from, "LLL dd, y")
+                        )
+                      ) : (
+                        <span>Pick a date range</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <div className="flex justify-end p-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleClearDateRange}
+                        disabled={!dateRange}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={dateRange?.from}
+                      selected={dateRange}
+                      onSelect={setDateRange}
+                      numberOfMonths={2}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Tickets Overview */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
@@ -712,7 +811,7 @@ const fetchAllData = async () => {
                 </p>
                 <p className="text-2xl font-bold">
                   {
-                    tickets.filter(
+                    filteredTickets.filter(
                       (t) =>
                         getStatusName(t.ticketStatusId).toLowerCase() === "open"
                     ).length
@@ -724,7 +823,7 @@ const fetchAllData = async () => {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
@@ -732,7 +831,7 @@ const fetchAllData = async () => {
                 </p>
                 <p className="text-2xl font-bold">
                   {
-                    tickets.filter((t) =>
+                    filteredTickets.filter((t) =>
                       getStatusName(t.ticketStatusId)
                         .toLowerCase()
                         .includes("progress")
@@ -745,7 +844,7 @@ const fetchAllData = async () => {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
@@ -753,7 +852,7 @@ const fetchAllData = async () => {
                 </p>
                 <p className="text-2xl font-bold">
                   {
-                    tickets.filter(
+                    filteredTickets.filter(
                       (t) =>
                         getStatusName(t.ticketStatusId).toLowerCase() ===
                         "resolved"
@@ -766,13 +865,13 @@ const fetchAllData = async () => {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
                   Total Tickets
                 </p>
-                <p className="text-2xl font-bold">{tickets.length}</p>
+                <p className="text-2xl font-bold">{filteredTickets.length}</p>
               </div>
               <MessageSquare className="h-8 w-8 text-blue-500" />
             </div>
@@ -780,121 +879,128 @@ const fetchAllData = async () => {
         </Card>
       </div>
 
+      {/* Tickets Table */}
       <Card>
         <CardHeader>
           <CardTitle>All Tickets ({filteredTickets.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ticket ID</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Ticket No</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTickets.map((ticket) => (
-                <TableRow
-                  key={ticket.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                >
-                  <TableCell className="font-medium">
-                    {ticket.id || "N/A"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-[200px]">
-                      <p className="font-medium truncate">
-                        {ticket.title || "Untitled"}
-                      </p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {getTypeName(ticket.ticketTypeId)}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">
-                          {ticket.customer?.name || "N/A"}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center p-6">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="mt-2 text-lg font-semibold text-muted-foreground">
+                Loading tickets...
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Ticket No</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTickets.map((ticket) => (
+                  <TableRow
+                    key={ticket.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                  >
+                    <TableCell onClick={() => setSelectedTicket(ticket)}>
+                      <div className="max-w-[200px]">
+                        <p className="font-medium truncate">
+                          {ticket.title || "Untitled"}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {ticket.customer?.email || "N/A"}
+                        <p className="text-sm text-muted-foreground truncate">
+                          {getTypeName(ticket.ticketTypeId)}
                         </p>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={getStatusColor(ticket.ticketStatusId)}
-                    >
-                      {getStatusIcon(ticket.ticketStatusId)}
-                      <span className="ml-1 capitalize">
-                        {getStatusName(ticket.ticketStatusId)}
-                      </span>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={getPriorityColor(ticket.ticketPriorityId)}
-                    >
-                      {getPriorityName(ticket.ticketPriorityId)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{ticket.ticketNo || "N/A"}</TableCell>
-                  <TableCell>{formatDate(ticket.createdDate)}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => setSelectedTicket(ticket)}
-                        >
-                          View Details
-                        </DropdownMenuItem>
-                        {ticketStatusesLookup.map((status) => (
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">
+                            {ticket.customer?.name || "N/A"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {ticket.customer?.email || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={getStatusColor(ticket.ticketStatusId)}
+                      >
+                        {getStatusIcon(ticket.ticketStatusId)}
+                        <span className="ml-1 capitalize">
+                          {getStatusName(ticket.ticketStatusId)}
+                        </span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={getPriorityColor(ticket.ticketPriorityId)}
+                      >
+                        {getPriorityName(ticket.ticketPriorityId)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{ticket.ticketNo || "N/A"}</TableCell>
+                    <TableCell>{formatDate(ticket.createdDate)}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            key={status.ticketStatusId}
-                            onClick={() =>
-                              handleUpdateTicketDetails(
-                                ticket.id,
-                                status.ticketStatusId,
-                                ticket.assignedTo,
-                                ticket.ticketPriorityId
-                              )
-                            }
+                            onClick={() => setSelectedTicket(ticket)}
                           >
-                            Mark as {status.name}
+                            View Details
                           </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteTicket(ticket.id)}
-                          className="text-red-600"
-                        >
-                          Delete Ticket
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                          {ticketStatusesLookup.map((status) => (
+                            <DropdownMenuItem
+                              key={status.ticketStatusId}
+                              onClick={() =>
+                                handleUpdateTicketDetails(
+                                  ticket.id,
+                                  status.ticketStatusId,
+                                  ticket.assignedTo,
+                                  ticket.ticketPriorityId
+                                )
+                              }
+                            >
+                              Mark as {status.name}
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteTicket(ticket.id)}
+                            className="text-red-600"
+                          >
+                            Delete Ticket
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
+      {/* Create Ticket Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -916,6 +1022,7 @@ const fetchAllData = async () => {
         </DialogContent>
       </Dialog>
 
+      {/* Ticket Detail Dialog */}
       <Dialog
         open={!!selectedTicket}
         onOpenChange={(open) => {
